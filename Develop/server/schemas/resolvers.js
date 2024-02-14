@@ -1,17 +1,21 @@
-const { Book, User } = require("../models");
+const { User } = require("../models");
 
 const resolvers = {
   Query: {
     me: async (parent, args, context) => {
       if (context.user) {
-        return User.findOne({ _id: context.user._id });
+        try {
+          const user = await User.findOne({ _id: context.user._id });
+          return user;
+        } catch (error) {
+          throw new Error("Error fetching user data");
+        }
       }
-      throw AuthenticationError;
+      throw new AuthenticationError("User not authenticated");
     },
   },
-  
-  Mutation: {
 
+  Mutation: {
     addUser: async (parent, { name, email, password }) => {
       const user = await User.create({ name, email, password });
       const token = signToken(user);
@@ -37,13 +41,22 @@ const resolvers = {
     },
   },
 
-  saveBook: async (parent, { user, body }, context) => {
-    if (context.user) {
-      return User.findOneAndUpdate(
-        { _id: user._id },
-        { $addToSet: { savedBooks: body } },
-        { new: true, runValidators: true }
-      );
+  saveBook: async (parent, { book }, context) => {
+    try {
+      if (context.user) {
+        const updatedUser = await User.findOneAndUpdate(
+          { _id: context.user._id },
+          { $addToSet: { savedBooks: book } },
+          { new: true, runValidators: true }
+        );
+
+        return updatedUser;
+      } else {
+        throw new AuthenticationError("User not authenticated");
+      }
+    } catch (error) {
+      console.error("Error saving book:", error.message);
+      throw new Error("Error saving book");
     }
   },
 
@@ -55,7 +68,7 @@ const resolvers = {
         { new: true }
       );
     }
-    throw AuthenticationError;
+    throw AuthenticationError("There was an error in removing the book");
   },
 };
 
