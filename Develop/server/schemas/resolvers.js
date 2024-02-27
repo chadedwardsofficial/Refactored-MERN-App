@@ -1,4 +1,5 @@
 const { User } = require("../models");
+const { signToken } = require("../utils/auth")
 
 const resolvers = {
   Query: {
@@ -16,10 +17,10 @@ const resolvers = {
   },
 
   Mutation: {
-    addUser: async (parent, { name, email, password }) => {
-      const user = await User.create({ name, email, password });
+    createUser: async (parent, { username, email, password }) => {
+      const user = await User.create({ username, email, password });
       const token = signToken(user);
-
+      console.log(user)
       return { token, user };
     },
 
@@ -39,7 +40,7 @@ const resolvers = {
       const token = signToken(user);
       return { token, user };
     },
-  },
+  
 
   saveBook: async (parent, { book }, context) => {
     try {
@@ -60,16 +61,19 @@ const resolvers = {
     }
   },
 
-  removeBook: async (parent, { book }, context) => {
+  removeBook: async (parent, { bookId }, context) => {
     if (context.user) {
       return User.findOneAndUpdate(
         { _id: context.user._id },
-        { $pull: { savedBooks: book } },
+        { $pull: { savedBooks: { bookId } } },
         { new: true }
       );
     }
     throw AuthenticationError("There was an error in removing the book");
   },
-};
+}
+}
+
+
 
 module.exports = resolvers;
